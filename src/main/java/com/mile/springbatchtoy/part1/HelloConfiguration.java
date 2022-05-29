@@ -1,4 +1,4 @@
-package com.mile.springbatchtoy.config;
+package com.mile.springbatchtoy.part1;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
