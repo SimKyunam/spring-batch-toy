@@ -10,3 +10,13 @@ spring:
     init:
       data-locations: classpath:person.sql
 
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true # 테이블 생성되는 것보다 init할sql이 먼저 실행, 에러 발생
+
