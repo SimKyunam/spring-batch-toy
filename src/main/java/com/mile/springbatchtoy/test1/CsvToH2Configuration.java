@@ -19,12 +19,17 @@ import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Configuration
 @Slf4j
@@ -51,8 +56,7 @@ public class CsvToH2Configuration {
                 .<Person, Person>chunk(10)
                 .reader(csvToH2ItemReader())
                 .processor(csvToH2ItemProcessor())
-                .writer(jdbcItemWriter())
-//                .writer(jpaItemWriter())
+                .writer(csvToH2ItemWriter())
                 .build();
     }
 
@@ -77,12 +81,30 @@ public class CsvToH2Configuration {
         return itemWriter;
     }
 
-    private ItemWriter<? super Person> csvToH2ItemWriter() {
-        return null;
+    private ItemWriter<? super Person> itemLogWriter() {
+        return items -> items.forEach(x -> log.info("PERSON.ID : {}", x.getId()));
+    }
+
+    private ItemWriter<? super Person> csvToH2ItemWriter() throws Exception {
+        CompositeItemWriter<Person> personCompositeItemWriter = new CompositeItemWriter<Person>();
+
+        List<ItemWriter<? super Person>> itemWriters = Arrays.asList(itemLogWriter(), jdbcItemWriter());
+        personCompositeItemWriter.setDelegates(itemWriters);
+
+        personCompositeItemWriter.afterPropertiesSet();
+        return personCompositeItemWriter;
     }
 
     private ItemProcessor<? super Person, ? extends Person> csvToH2ItemProcessor() {
-        return null;
+        Map<String, Person> duplicateMap = new HashMap<>();
+        return item -> {
+            if(!duplicateMap.containsKey(item.getName())) {
+                duplicateMap.put(item.getName(), item);
+                return item;
+            } else {
+                return null;
+            }
+        };
     }
 
     private FlatFileItemReader<Person> csvToH2ItemReader() throws Exception {
