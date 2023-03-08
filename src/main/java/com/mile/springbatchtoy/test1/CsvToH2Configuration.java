@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemProcessor;
@@ -20,6 +21,8 @@ import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.batch.item.support.builder.CompositeItemWriterBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -46,12 +49,13 @@ public class CsvToH2Configuration {
     public Job csvToH2ConvertJob() throws Exception {
         return this.jobBuilderFactory.get("csvToH2ConvertJob")
                 .incrementer(new RunIdIncrementer())
-                .start(this.csvToH2ConvertStep())
+                .start(this.csvToH2ConvertStep(null))
                 .build();
     }
 
     @Bean
-    public Step csvToH2ConvertStep() throws Exception {
+    @JobScope
+    public Step csvToH2ConvertStep(@Value("#{jobParameter[allow_duplicate]}") String allowDuplicate) throws Exception {
         return this.stepBuilderFactory.get("csvToH2ConvertStep")
                 .<Person, Person>chunk(10)
                 .reader(csvToH2ItemReader())
@@ -82,7 +86,7 @@ public class CsvToH2Configuration {
     }
 
     private ItemWriter<? super Person> itemLogWriter() {
-        return items -> items.forEach(x -> log.info("PERSON.ID : {}", x.getId()));
+        return items -> items.forEach(x -> log.info("PERSON : {}", x));
     }
 
     private ItemWriter<? super Person> csvToH2ItemWriter() throws Exception {
@@ -90,6 +94,11 @@ public class CsvToH2Configuration {
 
         List<ItemWriter<? super Person>> itemWriters = Arrays.asList(itemLogWriter(), jdbcItemWriter());
         personCompositeItemWriter.setDelegates(itemWriters);
+
+        //builder로 생성하는 경우
+//        CompositeItemWriter<Person> compositeItemBuild = new CompositeItemWriterBuilder<Person>()
+//                .delegates(itemLogWriter(), jdbcItemWriter())
+//                .build();
 
         personCompositeItemWriter.afterPropertiesSet();
         return personCompositeItemWriter;
@@ -125,7 +134,7 @@ public class CsvToH2Configuration {
         FlatFileItemReader<Person> itemReader = new FlatFileItemReaderBuilder<Person>()
                 .name("csvFileItemReader")
                 .encoding("UTF-8")
-                .resource(new ClassPathResource("bulktest.csv"))
+                .resource(new ClassPathResource("csvToH2bulktest.csv"))
                 .linesToSkip(1)
                 .lineMapper(lineMapper)
                 .build();
