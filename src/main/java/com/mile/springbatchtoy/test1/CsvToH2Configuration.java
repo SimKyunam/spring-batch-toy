@@ -55,11 +55,11 @@ public class CsvToH2Configuration {
 
     @Bean
     @JobScope
-    public Step csvToH2ConvertStep(@Value("#{jobParameter[allow_duplicate]}") String allowDuplicate) throws Exception {
+    public Step csvToH2ConvertStep(@Value("#{jobParameters[allow_duplicate]}") String allowDuplicate) throws Exception {
         return this.stepBuilderFactory.get("csvToH2ConvertStep")
                 .<Person, Person>chunk(10)
                 .reader(csvToH2ItemReader())
-                .processor(csvToH2ItemProcessor())
+                .processor(csvToH2ItemProcessor(Boolean.parseBoolean(allowDuplicate)))
                 .writer(csvToH2ItemWriter())
                 .build();
     }
@@ -104,9 +104,12 @@ public class CsvToH2Configuration {
         return personCompositeItemWriter;
     }
 
-    private ItemProcessor<? super Person, ? extends Person> csvToH2ItemProcessor() {
+    private ItemProcessor<? super Person, ? extends Person> csvToH2ItemProcessor(boolean allowDuplicate) {
         Map<String, Person> duplicateMap = new HashMap<>();
         return item -> {
+            if(allowDuplicate) {
+                return item;
+            }
             if(!duplicateMap.containsKey(item.getName())) {
                 duplicateMap.put(item.getName(), item);
                 return item;
