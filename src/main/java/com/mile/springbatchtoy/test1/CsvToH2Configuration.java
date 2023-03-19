@@ -21,7 +21,6 @@ import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.batch.item.support.builder.CompositeItemWriterBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,6 +49,8 @@ public class CsvToH2Configuration {
         return this.jobBuilderFactory.get("csvToH2ConvertJob")
                 .incrementer(new RunIdIncrementer())
                 .start(this.csvToH2ConvertStep(null))
+                .listener(new SavePersonListener.SavePersonJobExecutionListener())
+                .listener(new SavePersonListener.SavePersonAnnotationJobExecutionListener())
                 .build();
     }
 
@@ -61,6 +62,7 @@ public class CsvToH2Configuration {
                 .reader(csvToH2ItemReader())
                 .processor(csvToH2ItemProcessor(Boolean.parseBoolean(allowDuplicate)))
                 .writer(csvToH2ItemWriter())
+                .listener(new SavePersonListener.SavePersonStepExecutionListener())
                 .build();
     }
 
