@@ -20,7 +20,9 @@ import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.batch.item.support.builder.CompositeItemProcessorBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -61,9 +63,30 @@ public class CsvToH2Configuration {
                 .<Person, Person>chunk(10)
                 .reader(csvToH2ItemReader())
                 .processor(csvToH2ItemProcessor(Boolean.parseBoolean(allowDuplicate)))
+//                .processor(itemProcessor(Boolean.parseBoolean(allowDuplicate)))
                 .writer(csvToH2ItemWriter())
                 .listener(new SavePersonListener.SavePersonStepExecutionListener())
+                .faultTolerant()
+                .skip(NotFoundNameException.class)
+                .skipLimit(2)
                 .build();
+    }
+
+    private ItemProcessor<? super Person, ? extends Person> itemProcessor(boolean allowDuplicate) throws Exception {
+        ItemProcessor<Person, Person> personPersonItemProcessor = duplicateValidationProcessor(allowDuplicate);
+        ItemProcessor<Person, Person> validationProcessor = item -> {
+            if(item.isNotEmptyName()) {
+                return item;
+            }
+            throw new NotFoundNameException();
+        };
+
+        CompositeItemProcessor<Person, Person> itemProcessor = new CompositeItemProcessorBuilder<Person, Person>()
+                .delegates(validationProcessor, personPersonItemProcessor)
+                .build();
+
+        itemProcessor.afterPropertiesSet();
+        return itemProcessor;
     }
 
     private ItemWriter<Person> jpaItemWriter() throws Exception {
@@ -107,6 +130,10 @@ public class CsvToH2Configuration {
     }
 
     private ItemProcessor<? super Person, ? extends Person> csvToH2ItemProcessor(boolean allowDuplicate) {
+        return duplicateValidationProcessor(allowDuplicate);
+    }
+
+    private ItemProcessor<Person, Person> duplicateValidationProcessor(boolean allowDuplicate) {
         Map<String, Person> duplicateMap = new HashMap<>();
         return item -> {
             if(allowDuplicate) {
