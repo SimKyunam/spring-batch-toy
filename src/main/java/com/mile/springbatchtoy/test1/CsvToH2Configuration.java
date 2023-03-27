@@ -62,13 +62,15 @@ public class CsvToH2Configuration {
         return this.stepBuilderFactory.get("csvToH2ConvertStep")
                 .<Person, Person>chunk(10)
                 .reader(csvToH2ItemReader())
-                .processor(csvToH2ItemProcessor(Boolean.parseBoolean(allowDuplicate)))
-//                .processor(itemProcessor(Boolean.parseBoolean(allowDuplicate)))
+//                .processor(csvToH2ItemProcessor(Boolean.parseBoolean(allowDuplicate)))
+                .processor(itemProcessor(Boolean.parseBoolean(allowDuplicate)))
                 .writer(csvToH2ItemWriter())
                 .listener(new SavePersonListener.SavePersonStepExecutionListener())
                 .faultTolerant()
                 .skip(NotFoundNameException.class)
                 .skipLimit(2)
+//                .retry(NotFoundNameException.class)
+//                .retryLimit(3)
                 .build();
     }
 
@@ -82,7 +84,7 @@ public class CsvToH2Configuration {
         };
 
         CompositeItemProcessor<Person, Person> itemProcessor = new CompositeItemProcessorBuilder<Person, Person>()
-                .delegates(validationProcessor, personPersonItemProcessor)
+                .delegates(new PersonValidationRetryProcessor(), validationProcessor, personPersonItemProcessor)
                 .build();
 
         itemProcessor.afterPropertiesSet();
