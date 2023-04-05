@@ -1,5 +1,6 @@
 package com.mile.springbatchtoy.part4;
 
+import com.mile.springbatchtoy.part5.JobParametersDecide;
 import com.mile.springbatchtoy.part5.OrderStatistics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,8 +53,11 @@ public class UserConfiguration {
                 .incrementer(new RunIdIncrementer())
                 .start(this.saveUserStep())
                 .next(this.userLevelUpStep())
-                .next(this.orderStatisticsStep(null))
                 .listener(new LevelUpJobExecutionListener(userRepository))
+                .next(new JobParametersDecide("date"))
+                    .on(JobParametersDecide.CONTINUE.getName())
+                    .to(this.orderStatisticsStep(null))
+                    .build()
                 .build();
     }
 
