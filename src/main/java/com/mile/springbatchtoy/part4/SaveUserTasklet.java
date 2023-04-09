@@ -15,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SaveUserTasklet implements Tasklet {
 
-    private final int SIZE = 100;
+    private final int SIZE = 10_000;
     private final UserRepository userRepository;
 
     @Override
