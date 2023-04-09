@@ -4,12 +4,8 @@ spring:
       names: ${job.name:NONE}
 
   jpa:
-    show-sql: true
     hibernate:
       ddl-auto: create
 #      naming:
 #        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl # 테이블 대문자 사용시
-    properties:
-      hibernate:
-        format_sql: true
     defer-datasource-initialization: true # 테이블 생성되는 것보다 init 할 sql이 먼저 실행, 에러 발생
